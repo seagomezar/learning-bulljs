@@ -1,0 +1,19 @@
+{
+  "name": "bull-examples",
+  "version": "1.0.0",
+  "description": "Repository with BullJS examples",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Bull",
+    "node",
+    "redis"
+  ],
+  "author": "seagomezar@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "bull": "^3.13.0"
+  }
+}
