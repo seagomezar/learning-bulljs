@@ -1,4 +1,4 @@
-**Practica BullJS**
+**Aprendiendo BullJS**
 
 Es común que nos encontremos algún proyecto en nuestra vida de programador con requerimientos muy puntuales en cuanto a funciones y su ejecución. Por ejemplo usar funciones en javascript que deban ejecutarse una cantidad específica de veces, poder volver a ejecutarse en caso de fallar o una o varias veces y priorizar estas funciones para saber cual ejecutar primero, entre muchas otras cosas. Es allí donde muchos sistemas de manejo de colas para NodeJS empiezan a tomar importancia. Sin embargo en este artículo vamos a hablar de una en particular llamada BullJS.
 
@@ -8,14 +8,14 @@ El proyecto BullJS se define a sí mismo como: “El sistema de colas más rapid
 
 Para instalar BullJS necesitas tener NodeJS instalado y además ejecutar el comando:
 
-```
+```javascript
 npm install bull
 ```
 
 Como mencionamos arriba, bull necesita redis-database, ya que es el lugar donde se almacena y se administran los “jobs” y los messages. Si tu tienes docker instalado en tu máquina, podemos ejecutar:
 
-```
-docker run — name my-redis-container -p 6379:6379 -d redis
+```sh
+$ docker run — name my-redis-container -p 6379:6379 -d redis
 ```
 
 Esto inicia una base de datos local de redis que estará ejecutandose en 127.0.0.1:6379
@@ -28,15 +28,15 @@ BullJS tiene dos elementos principales que definen todo el ecosistema para traba
 
 Una cola es un objeto de javascript que puede producir y consumir jobs. Para este ejemplo vamos nombrar una newsLetterMail, pero tu puedes ponerle el nombre que quieras. Cuando creamos una instancia de una cola debemos especificarle el host y el puerto de tu base de datos de Redis ya que el default es 127.0.0.1:6379. Veamos entonces cómo sería esto:
 
-```
-import Queue from 'bull'
+```javascript
+import Queue from "bull";
 
-const newsLetterMailQueue = new Queue('newsLetterMail', {
+const newsLetterMailQueue = new Queue("newsLetterMail", {
   redis: {
-    host: '127.0.0.1',
-    port: 6379
-  }
-})
+    host: "127.0.0.1",
+    port: 6379,
+  },
+});
 ```
 
 Nota que hemos importado Bull con alias de Queue y hemos creado la Cola pasándole dos argumentos, el nombre y un objeto con la configuración de redis. Eso es todo con las colas pasemos ahora a los…
@@ -45,17 +45,17 @@ Nota que hemos importado Bull con alias de Queue y hemos creado la Cola pasándo
 
 Ahora que tenemos una Queue, creemos nuestro primer Job. Para esto vamos a pasar un objeto con datos que contenga la dirección de email a la cual queremos enviar el email, adicionalmente vamos a pasar algunas opciones. En este ejemplo queremos procesar el job 7 días después de haber sido creado. También si el job falla se va a intentar ejecutar tres veces:
 
-```
+```javascript
 const data = {
-  email: 'foo@bar.com'
-}
+  email: "foo@bar.com",
+};
 
 const options = {
   delay: 86400000,
-  attempts: 3
-}
+  attempts: 3,
+};
 
-newsLetterMailQueue.add(data, options)
+newsLetterMailQueue.add(data, options);
 ```
 
 Para añadir un job a una queue utilizamos la función add que viene en el objeto de javascript que nos devuelve la creación de la cola, ésto hace que BullJS añada el job a la base de datos con las opciones que hemos especificado.
@@ -64,10 +64,10 @@ Para añadir un job a una queue utilizamos la función add que viene en el objet
 
 Para procesar un Job, necesitamos especificar una función que pueda ser llamada por cada job en una cola, sin importar cuantos sean. Esta función se llama “process” y hace parte del objeto de la queue que hemos definido:
 
-```
-newsLetterMailQueue.process(async job => {
-  await sendNewsLetterMailTo(job.data.email)
-})
+```javascript
+newsLetterMailQueue.process(async (job) => {
+  await sendNewsLetterMailTo(job.data.email);
+});
 ```
 
 Hemos extraído la propiedad email del Job mediante job.data y luego llamamos una función que se encarga de enviar el correo. Si esta función llega a fallar por algún error de javascript BullJS controlará dicho error e intentará ejectuarlo de nuevo hasta máximo 3 veces o las veces que le hayamos especificado en las opciones del Job.
@@ -76,7 +76,7 @@ Hemos extraído la propiedad email del Job mediante job.data y luego llamamos un
 
 Ahora imaginemos que la ejecución ha finalizado, ¿Cómo podemos saber esto? O mejor aún ¿Como conocemos si algo falló?. Es ahí donde cabe anotar que cada vez que finalicé el proceso de un Job, necesitamos o bien resolver una promesa o bien ejecutar un callback, veamos estas dos opciones:
 
-```
+```javascript
 newsLetterMailQueue.process(async (job, done) => {
   await sendNewsLetterMailTo(job.data.email);
   done(null, {"message"; "Email sent"})
@@ -100,7 +100,7 @@ Es posible notificar sobre el progreso de un Job mediate job.progress, ya que si
 
 Una particularidad de Bull es que dentro del process de una queue, cada vez que se obtenga un error se va a finalizar el proceso del job y se va a reintentar, explícitamente podemos manejar esto de las dos maneras en que resolvemos un Job es decir con el objeto done, pasándole como primer parámetro el error, o retornando una promesa rechazada.
 
-```
+```javascript
 newsLetterMailQueue.process(async (job, done) => {
   await sendNewsLetterMailTo(job.data.email);
   done(new Error("Algo salió muy mal"))
@@ -118,21 +118,21 @@ Algo que es importante que notes es que los try y los catch no funcionan dentro 
 
 Algo que es muy interesante con BullJS es que podemos manejar concurrencia de jobs utilizando los procesadores que tenga nuestro computador, esto hace que podamos distribuir cargas de trabajo entre distintos nodos de una manera sencilla y dejarle a BullJS que maneja la concurrencia y la distribución, pero para ello se requiere que coloquemos la función process en un archivo independiente y que definamos cual sería la concurrencia máxima de Jobs en un mismo momento, veamos un ejemplo:
 
-```
+```javascript
 const numMaxJobsConcurrent = 4;
-newsLetterMailQueue.process(numMaxJobsConcurrent, 'path/to/funcion/file.js')
+newsLetterMailQueue.process(numMaxJobsConcurrent, "path/to/funcion/file.js");
 ```
 
 De esta manera supongamos que cuatro usuarios se registran entonces BullJS es capaz de ejecutar dichos procesos de manera simultánea sin que ninguno bloquee a otro. Sin embargo tienes que exportar la función en el archivo que estás procesando:
 
-```
+```javascript
 ///path/to/funcion/file.js
 
-const processJob = async job => {
+const processJob = async (job) => {
   /// Do something
- await sendNewsLetterMailTo(job.data.email);
-}
-module.exports = processJob
+  await sendNewsLetterMailTo(job.data.email);
+};
+module.exports = processJob;
 ```
 
 Así estarás asegurando el correcto funcionamiento de la concurrencia y podrás ejecutar tantos jobs como desees.
@@ -141,24 +141,22 @@ Así estarás asegurando el correcto funcionamiento de la concurrencia y podrás
 
 Hasta ahora hemos explorado bastantes funcionalidades de BullJS, sin embargo la más importante para mi resulta en la manera en que puedo escuchar por el estado y el resultado de un job en la misma aplicación o en una aplicación externa y completamente distinta, lo que quiere decir que si tienes dos o más servidores que ejecutan tareas y necesitan notificarse entre ellos el progreso y la completitud de las mismas aquí se vuelve aún más relevante esta librería. Imaginemos que una vez que se envía el email a nuestro usuario queremos enviarle un mensaje de texto y esto lo hará otro servidor totalmente distinto a donde tenemos alojado el código del envío de email. Bien lo que haremos será crear una cola con exactamente el mismo nombre y escucharemos por un mensaje que nos diga cuando un Job terminó:
 
-```
-import Queue from 'bull'
+```javascript
+import Queue from "bull";
 
-const newsLetterMailQueue = new Queue('newsLetterMail', {
+const newsLetterMailQueue = new Queue("newsLetterMail", {
   redis: {
-    host: '127.0.0.1',
-    port: 6379
-  }
-})
+    host: "127.0.0.1",
+    port: 6379,
+  },
+});
 
+newsLetterMailQueue.on("global:completed", async (jobId, result) => {
+  // aquí en result obtenemos el resultado que se envía y
+  // además un identificador único al Job
 
-newsLetterMailQueue.on('global:completed', async (jobId, result) => {
-// aquí en result obtenemos el resultado que se envía y
-// además un identificador único al Job
-
-await sendSMS();
-
-})
+  await sendSMS();
+});
 ```
 
 Dos cosas que son importantes notar aquí es:
@@ -171,7 +169,7 @@ El evento 'global:completed' es el evento que se usa cross servidor es decir par
 
 Además del evento completed hay una lista enorme de eventos por los que se puede escuchar, aquí veremos una lista:
 
-```
+```javascript
 .on('error', function(error) {
   // An error occured.
 })
@@ -233,9 +231,9 @@ Link al repositorio con todos los ejemplos.
 
 Links a los ejemplos específicos.
 
-1. Simple creación y ejecución de un Job
-2. Ciclo de vida de un Job local y Global
-3. Manejo de errores
-4. Concurrencia de Jobs y notificaciones
+1. [Simple creación y ejecución de un Job](https://github.com/seagomezar/learning-bulljs/tree/master/example-1-simple-queue-and-job)
+2. [Ciclo de vida de un Job local y Global](https://github.com/seagomezar/learning-bulljs/tree/master/example-2-job-lifecycle)
+3. [Manejo de errores](https://github.com/seagomezar/learning-bulljs/tree/master/example-3-error-handling)
+4. [Concurrencia de Jobs y notificaciones](https://github.com/seagomezar/learning-bulljs/tree/master/example-4-concurrency)
 
 <!-- Docs to Markdown version 1.0β21 -->
