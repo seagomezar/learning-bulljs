@@ -14,7 +14,7 @@ const init = () => {
   queue.add({ xNumbers: 20, ySeconds: 10 }); // Here you add the job
   queue.add({ xNumbers: 30, ySeconds: 10 }); // Here you add the job
   queue.add({ xNumbers: 40, ySeconds: 10 }); // Here you add the job
-  queue.add({ xNumbers: 50, ySeconds: 10 }); // Here you add the job
+  queue.add({ xNumbers: 50, ySeconds: 10 }); // This Job will fail
   queue.add({ xNumbers: 60, ySeconds: 10 }); // Here you add the job
 };
 
