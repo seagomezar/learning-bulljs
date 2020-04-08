@@ -4,7 +4,14 @@
   "description": "Repository with BullJS examples",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "example1": "DEBUG=externalconsumer* node example-1-simple-queue-and-job/queue.js",
+    "example2producer": "DEBUG=producer*  node example-2-job-lifecycle/producer.js",
+    "example2consumer": "DEBUG=externalconsumer*  node example-2-job-lifecycle/external-consumer.js",
+    "example3producer": "DEBUG=producer*  node example-3-error-handling/producer.js",
+    "example3consumer": "DEBUG=externalconsumer*  node example-3-error-handling/external-consumer.js",
+    "example4producer": "DEBUG=producer*  node example-4-concurrency/producer.js",
+    "example4consumer": "DEBUG=externalconsumer*  node example-4-concurrency/external-consumer.js"
   },
   "keywords": [
     "Bull",
